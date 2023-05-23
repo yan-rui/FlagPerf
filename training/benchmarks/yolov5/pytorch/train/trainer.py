@@ -45,10 +45,10 @@ from utils.callbacks import Callbacks
 from utils.dataloaders import create_dataloader
 from utils.downloads import attempt_download, is_url
 from utils.general import (LOGGER, check_amp, check_dataset, check_file, check_git_status, check_img_size,
-                           check_requirements, check_suffix, check_yaml, colorstr, get_latest_run, increment_path,
+                           check_requirements, check_suffix, check_yaml, colorstr, get_latest_run,
                            init_seeds, intersect_dicts, labels_to_class_weights, labels_to_image_weights, methods,
-                           one_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
-from utils.loggers import Loggers
+                           one_cycle, print_args, strip_optimizer)
+
 from utils.loss import ComputeLoss
 from utils.metrics import fitness
 from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
@@ -62,15 +62,11 @@ WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
 
 
 def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.yaml or hyp dictionary
-    save_dir, epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
-        Path(opt.save_dir), opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
+    epochs, batch_size, weights, single_cls, evolve, data, cfg, resume, noval, nosave, workers, freeze = \
+        opt.epochs, opt.batch_size, opt.weights, opt.single_cls, opt.evolve, opt.data, opt.cfg, \
         opt.resume, opt.noval, opt.nosave, opt.workers, opt.freeze
     callbacks.run('on_pretrain_routine_start')
 
-    # Directories
-    w = save_dir / 'weights'  # weights dir
-    (w.parent if evolve else w).mkdir(parents=True, exist_ok=True)  # make dir
-    last, best = w / 'last.pt', w / 'best.pt'
 
     # Hyperparameters
     if isinstance(hyp, str):
@@ -79,19 +75,9 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     LOGGER.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     opt.hyp = hyp.copy()  # for saving hyps to checkpoints
 
-    # Save run settings
-    # if not evolve:
-    #     yaml_save(save_dir / 'hyp.yaml', hyp)
-    #     yaml_save(save_dir / 'opt.yaml', vars(opt))
 
-    # Loggers
+    
     data_dict = None
-    if RANK in {-1, 0}:
-        loggers = Loggers(save_dir, weights, opt, hyp, LOGGER)  # loggers instance
-
-        # Register actions
-        for k in methods(loggers):
-            callbacks.register_action(k, callback=getattr(loggers, k))
 
     # Config
     cuda = device.type != 'cpu'
@@ -137,7 +123,7 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     # Batch size
     if RANK == -1 and batch_size == -1:  # single-GPU only, estimate best batch size
         batch_size = check_train_batch_size(model, imgsz, amp)
-        loggers.on_params_update({"batch_size": batch_size})
+
 
     # Optimizer
     nbs = 64  # nominal batch size
@@ -247,7 +233,6 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     callbacks.run('on_train_start')
     LOGGER.info(f'Image sizes {imgsz} train, {imgsz} val\n'
                 f'Using {train_loader.num_workers * WORLD_SIZE} dataloader workers\n'
-                f"Logging results to {colorstr('bold', save_dir)}\n"
                 f'Starting training for {epochs} epochs...')
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         
@@ -353,7 +338,6 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
                                            model=ema.ema,
                                            single_cls=single_cls,
                                            dataloader=val_loader,
-                                           save_dir=save_dir,
                                            plots=False,
                                            callbacks=callbacks,
                                            compute_loss=compute_loss,
@@ -390,14 +374,14 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
                     # 'opt': vars(opt),
                     'date': datetime.now().isoformat()}
 
-                # Save last, best and delete
-                torch.save(ckpt, last)
-                if best_fitness == fi:
-                    torch.save(ckpt, best)
-                if opt.save_period > 0 and epoch % opt.save_period == 0:
-                    torch.save(ckpt, w / f'epoch{epoch}.pt')
-                del ckpt
-                callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
+                # # Save last, best and delete
+                # torch.save(ckpt, last)
+                # if best_fitness == fi:
+                #     torch.save(ckpt, best)
+                # if opt.save_period > 0 and epoch % opt.save_period == 0:
+                #     torch.save(ckpt, w / f'epoch{epoch}.pt')
+                # del ckpt
+                # callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
         # EarlyStopping
         if RANK != -1:  # if DDP training
@@ -412,29 +396,27 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     # end training -----------------------------------------------------------------------------------------------------
     if RANK in {-1, 0}:
         LOGGER.info(f'\n{epoch - start_epoch + 1} epochs completed in {(time.time() - t0) / 3600:.3f} hours.')
-        for f in last, best:
-            if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is best:
-                    LOGGER.info(f'\nValidating {f}...')
-                    results, _, _ = val.run(
-                        data_dict,
-                        batch_size=batch_size // WORLD_SIZE * 2,
-                        imgsz=imgsz,
-                        model=attempt_load(f, device).half(),
-                        iou_thres=0.65 if is_coco else 0.60,  # best pycocotools results at 0.65
-                        single_cls=single_cls,
-                        dataloader=val_loader,
-                        save_dir=save_dir,
-                        save_json=is_coco,
-                        verbose=True,
-                        plots=False,
-                        callbacks=callbacks,
-                        compute_loss=compute_loss)  # val best model with plots
-                    if is_coco:
-                        callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
+        # for f in last, best:
+        #     if f.exists():
+        #         strip_optimizer(f)  # strip optimizers
+        #         if f is best:
+        #             LOGGER.info(f'\nValidating {f}...')
+        #             results, _, _ = val.run(
+        #                 data_dict,
+        #                 batch_size=batch_size // WORLD_SIZE * 2,
+        #                 imgsz=imgsz,
+        #                 model=attempt_load(f, device).half(),
+        #                 iou_thres=0.65 if is_coco else 0.60,  # best pycocotools results at 0.65
+        #                 single_cls=single_cls,
+        #                 dataloader=val_loader,
+        #                 save_json=is_coco,
+        #                 verbose=True,
+        #                 plots=False,
+        #                 callbacks=callbacks,
+        #                 compute_loss=compute_loss)  # val best model with plots
+        #             if is_coco:
+        #                 callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
-        callbacks.run('on_train_end', last, best, False, epoch, results)
 
     torch.cuda.empty_cache()
     return results
@@ -469,7 +451,6 @@ def run(opt, training_state=TrainingState(), callbacks=Callbacks()):
             opt.exist_ok, opt.resume = opt.resume, False  # pass resume to exist_ok and disable resume
         if opt.name == 'cfg':
             opt.name = Path(opt.cfg).stem  # use model.yaml as name
-        
 
     # DDP mode
     device = select_device(opt.device, batch_size=opt.batch_size, n_device = opt.n_device)
