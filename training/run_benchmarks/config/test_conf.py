@@ -57,5 +57,5 @@ CASES = {
     # "glm:pytorch:A100:1:8:1": "/home/datasets_ckpt/glm/train/",
     # "cpm:pytorch:A100:1:8:1": "/home/datasets_ckpt/cpm/train/",
     # "resnet50:pytorch:A100:1:8:1": "/home/datasets_ckpt/resnet50/train/",
-    "yolov5:pytorch:BI-V100:1:2:1": "/data/sen.li/workspace/datasets/yolov5/coco",
+    "yolov5:pytorch:BI-V100:1:2:1": "/home/yanrui/coco128",
 }

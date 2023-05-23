@@ -1,5 +1,6 @@
 
-vendor="iluvatar"
+vendor="nvidia"
+
 data_dir = "/home/yanrui/coco128"
 
 epochs=10
