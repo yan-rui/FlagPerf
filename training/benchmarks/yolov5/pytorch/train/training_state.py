@@ -52,7 +52,7 @@ class TrainingState:
         state_dict["learning_rate"] = lr
         # yolov5 
         exclude = [
-            "eval_loss", "eval_P", "eval_R", "eval_mAP_0_5", "eval_mAP_5_95", "skipped_steps",
+            "eval_P", "eval_R", "eval_mAP_0_5", "eval_mAP_5_95", "skipped_steps",
             "converged", "init_time", "raw_train_time"
         ]
         for exkey in exclude:
