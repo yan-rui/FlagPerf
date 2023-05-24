@@ -510,7 +510,6 @@ def run(opt, training_state=TrainingState(), callbacks=Callbacks()):
         if opt.noautoanchor:
             del hyp['anchors'], meta['anchors']
         opt.noval, opt.nosave = True, True # only val/save final epoch
-        # ei = [isinstance(x, (int, float)) for x in hyp.values()]  # evolvable indices
 
         for _ in range(opt.evolve):  # generations to evolve
             # Constrain to limits

@@ -1,8 +1,3 @@
-"""Pytorch Pretraining Example"""
-"""
-说明：文档中所有TODO的地方，都需要自定义实现。尽量保证接口一致。没有标记TODO的地方，可以参考示例中的实现，或者在此基础上做些微调。
-"""
-
 # 标准库
 import os
 import sys
@@ -21,15 +16,9 @@ import config
 from driver import Event, dist_pytorch
 from driver.helper import InitHelper
 
-# TODO 导入相关的模块、方法、变量。这里保持名称一致，实现可以不同。
-# from train import trainer_adapter
-# from train.evaluator import Evaluator
-# from train.trainer import main
+
 from train import trainer
 from train.training_state import TrainingState
-# TODO 这里需要导入dataset, dataloader的相关方法。 这里尽量保证函数的接口一致，实现可以不同。
-# from utils.dataloader import build_train_dataset, \
-#     build_eval_dataset, build_train_dataloader, build_eval_dataloader
 
 logger = None
 
@@ -94,13 +83,12 @@ if __name__ == "__main__":
     e2e_time = time.time() - start
     if config_update.do_train:
         
-        # TODO 构建训练所需的统计信息，包括不限于：e2e_time、training_sequences_per_second、
-        # converged、final_accuracy、raw_train_time、init_time              
+            
         training_perf = (dist_pytorch.global_batch_size(config_update) *
                          state.global_steps) / state.raw_train_time
         finished_info = {
             "e2e_time": e2e_time,
-            "training_sequences_per_second": training_perf,
+            "training_imgs_per_second": training_perf,
             "converged": state.converged,
             "final_P": state.P,
             "final_R": state.R,
