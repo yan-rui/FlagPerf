@@ -510,9 +510,10 @@ def run(opt, training_state=TrainingState(), callbacks=Callbacks()): # flagperf
     # Train
     if not opt.evolve:
         train(opt.hyp, opt, device, callbacks, training_state)
-        if WORLD_SIZE > 1 and RANK == 0:
-            LOGGER.info('Destroying process group... ')
-            dist.destroy_process_group()
+        # if WORLD_SIZE > 1 and RANK == 0:
+        #     LOGGER.info('Destroying process group... ')
+        #     dist.destroy_process_group()
+        #     LOGGER.info('Destroy process group successed ! ')
 
     # Evolve hyperparameters (optional)
     else:
