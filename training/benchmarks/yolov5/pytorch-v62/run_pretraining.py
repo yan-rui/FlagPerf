@@ -10,7 +10,6 @@ from typing import Any, Tuple
 CURR_PATH = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.abspath(os.path.join(CURR_PATH,
                                              "../../")))  # benchmarks目录
-sys.path.append(os.path.abspath(CURR_PATH))  # 当前目录
 
 # 本地库
 import config
