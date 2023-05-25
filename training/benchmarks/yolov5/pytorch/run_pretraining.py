@@ -94,8 +94,7 @@ if __name__ == "__main__":
             "final_P": state.P,
             "final_R": state.R,
             "final_mAP50": state.mAP50,
-            "final_mAP": state.mAP,
-            "final_fitness": state.best_fitness,   
+            "final_mAP": state.mAP, 
             "raw_train_time": state.raw_train_time,
             "init_time": state.init_time,
         }
