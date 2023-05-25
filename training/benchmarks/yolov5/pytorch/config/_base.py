@@ -9,7 +9,7 @@ name="yolov5"
 device=None
 n_device=1
 fp16=True
-data_dir="" 
+data_dir=""  # data dir, save as CASES's data dir in test_conf.py
 gradient_accumulation_steps=1
 dist_backend="nccl"
 do_train=True
@@ -20,7 +20,7 @@ target_fitness=0.5
 # yolov5 config
 weights=""
 cfg="yolov5s.yaml"
-data="coco128.yaml"
+data="coco.yaml"
 hyp="hyps/hyp.scratch-low.yaml"
 epochs=10
 batch_size=train_batch_size

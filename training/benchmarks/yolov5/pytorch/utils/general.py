@@ -406,6 +406,7 @@ def check_dataset(data, autodownload=False, opt_data_dir=""):
     
     # flagperf
     path = Path(opt_data_dir) 
+    data["path"] = str(path)
     
     if not path.is_absolute():
         path = (ROOT / path).resolve()
