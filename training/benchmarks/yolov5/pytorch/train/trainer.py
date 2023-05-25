@@ -75,7 +75,10 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     LOGGER.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     opt.hyp = hyp.copy()  # for saving hyps to checkpoints
 
-
+    save_dir = Path("/home/yanrui/flagperf/training/result")
+    w = save_dir / 'weights'  # weights dir
+    (w.parent if evolve else w).mkdir(parents=True, exist_ok=True)  # make dir
+    last, best = w / 'last.pt', w / 'best.pt'
     
     data_dict = None
 
@@ -375,13 +378,13 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
                     'date': datetime.now().isoformat()}
 
                 # # Save last, best and delete
-                # torch.save(ckpt, last)
-                # if best_fitness == fi:
-                #     torch.save(ckpt, best)
-                # if opt.save_period > 0 and epoch % opt.save_period == 0:
-                #     torch.save(ckpt, w / f'epoch{epoch}.pt')
-                # del ckpt
-                # callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
+                torch.save(ckpt, last)
+                if best_fitness == fi:
+                    torch.save(ckpt, best)
+                if opt.save_period > 0 and epoch % opt.save_period == 0:
+                    torch.save(ckpt, w / f'epoch{epoch}.pt')
+                del ckpt
+                callbacks.run('on_model_save', last, epoch, final_epoch, best_fitness, fi)
 
         # EarlyStopping
         if RANK != -1:  # if DDP training
@@ -396,26 +399,26 @@ def train(hyp, opt, device, callbacks, training_state):  # hyp is path/to/hyp.ya
     # end training -----------------------------------------------------------------------------------------------------
     if RANK in {-1, 0}:
         LOGGER.info(f'\n{epoch - start_epoch + 1} epochs completed in {(time.time() - t0) / 3600:.3f} hours.')
-        # for f in last, best:
-        #     if f.exists():
-        #         strip_optimizer(f)  # strip optimizers
-        #         if f is best:
-        #             LOGGER.info(f'\nValidating {f}...')
-        #             results, _, _ = val.run(
-        #                 data_dict,
-        #                 batch_size=batch_size // WORLD_SIZE * 2,
-        #                 imgsz=imgsz,
-        #                 model=attempt_load(f, device).half(),
-        #                 iou_thres=0.65 if is_coco else 0.60,  # best pycocotools results at 0.65
-        #                 single_cls=single_cls,
-        #                 dataloader=val_loader,
-        #                 save_json=is_coco,
-        #                 verbose=True,
-        #                 plots=False,
-        #                 callbacks=callbacks,
-        #                 compute_loss=compute_loss)  # val best model with plots
-        #             if is_coco:
-        #                 callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
+        for f in last, best:
+            if f.exists():
+                strip_optimizer(f)  # strip optimizers
+                if f is best:
+                    LOGGER.info(f'\nValidating {f}...')
+                    results, _, _ = val.run(
+                        data_dict,
+                        batch_size=batch_size // WORLD_SIZE * 2,
+                        imgsz=imgsz,
+                        model=attempt_load(f, device).half(),
+                        iou_thres=0.65 if is_coco else 0.60,  # best pycocotools results at 0.65
+                        single_cls=single_cls,
+                        dataloader=val_loader,
+                        save_json=is_coco,
+                        verbose=True,
+                        plots=False,
+                        callbacks=callbacks,
+                        compute_loss=compute_loss)  # val best model with plots
+                    if is_coco:
+                        callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
 
     torch.cuda.empty_cache()
