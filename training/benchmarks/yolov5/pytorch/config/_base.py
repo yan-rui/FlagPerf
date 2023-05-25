@@ -54,4 +54,9 @@ upload_dataset=False
 bbox_interval=-1
 artifact_alias="latest"
 
+project="result/runs"
+
+
+
+
 

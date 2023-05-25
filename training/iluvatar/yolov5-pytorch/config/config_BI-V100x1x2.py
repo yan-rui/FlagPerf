@@ -1,6 +1,6 @@
 
 vendor="iluvatar"
-data_dir = "/home/yanrui/coco128"
+data_dir = "/home/yanrui/data/data"
 
 epochs=10
 batch_size= 64 * 2
