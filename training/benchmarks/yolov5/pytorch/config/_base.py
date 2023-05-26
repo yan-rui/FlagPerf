@@ -15,7 +15,7 @@ dist_backend="nccl"
 do_train=True
 train_batch_size=64
 
-target_fitness=0.5
+target_map=0.363
 
 # yolov5 config
 weights=""

@@ -393,6 +393,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 training_state.R = _mr
                 training_state.mAP50 = _map50
                 training_state.mAP = _map
+                if  training_state.mAP>= opt.target_map:
+                    training_state.converged_success()
 
             # Update best mAP
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
@@ -400,8 +402,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             if fi > best_fitness:
                 best_fitness = fi
                 training_state.best_fitness = best_fitness
-            if fi >= opt.target_fitness:
-                training_state.converged_success()
+
             log_vals = list(mloss) + list(results) + lr
             callbacks.run('on_fit_epoch_end', log_vals, epoch, best_fitness, fi)
 
