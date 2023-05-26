@@ -1,10 +1,11 @@
 
 vendor="nvidia"
 
-data_dir = "/home/yanrui/coco128"
+data_dir = "/home/datasets_ckpt/yolov5/train" # same as data path in test_conf CASE
+n_device=2
 
-epochs=10
-batch_size=64 * 2
+epochs= 300
+batch_size= 16 * n_device
 cfg="yolov5s.yaml"
-data="coco128.yaml"
+data="coco.yaml"
 hyp="hyps/hyp.scratch-low.yaml"
